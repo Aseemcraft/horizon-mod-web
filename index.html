@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>محول مودات ماين كرافت إلى Rust</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+    .card { background: #1e293b; padding: 2rem; border-radius: 16px; width: 90%; max-width: 450px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid #334155; }
+    h1 { color: #38bdf8; font-size: 1.5rem; margin-bottom: 0.5rem; }
+    p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.5rem; }
+    input[type="file"] { display: none; }
+    .upload-btn { background: #0284c7; color: white; padding: 12px 24px; border-radius: 8px; cursor: pointer; display: inline-block; font-weight: bold; transition: 0.2s; }
+    .upload-btn:hover { background: #0369a1; }
+    #status { margin-top: 1.5rem; font-size: 0.95rem; line-height: 1.6; }
+    a.link { color: #4ade80; font-weight: bold; text-decoration: none; display: inline-block; margin-top: 10px; padding: 8px 16px; background: #14532d; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>⚡ محول مودات Java إلى Rust</h1>
+    <p>ارفع ملف المود (.jar) وسيقوم الذكاء الاصطناعي بتحويله وتجميعه لمحرك Horizon و Starling تلقائياً.</p>
+    <label class="upload-btn">
+      اختر ملف المود (.jar)
+      <input type="file" id="modFile" accept=".jar">
+    </label>
+    <div id="status"></div>
+  </div>
+
+  <script>
+    document.getElementById('modFile').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const status = document.getElementById('status');
+      status.innerHTML = "⏳ جاري رفع المود وإرساله لمحرك الذكاء الاصطناعي...";
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result.split(',')[1];
+        try {
+          const res = await fetch('/api/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileBase64: base64 })
+          });
+          const data = await res.json();
+          if (data.success) {
+            status.innerHTML = `✅ تم استلام المود وبدأت عملية التحويل!<br>انتظر دقيقة ثم حمل المود الجاهز من قسم Artifacts:<br><a class="link" href="${data.actionsUrl}" target="_blank">متابعة التحويل والتحميل 🚀</a>`;
+          } else {
+            status.innerHTML = "❌ حدث خطأ: " + data.error;
+          }
+        } catch (err) {
+          status.innerHTML = "❌ فشل الاتصال بالسيرفر.";
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  </script>
+</body>
+</html>
