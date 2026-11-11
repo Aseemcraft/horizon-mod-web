@@ -31,9 +31,12 @@ module.exports = async (req, res) => {
       sha,
     });
 
+    const domain = "github.com";
+    const finalUrl = "https://" + domain + "/" + owner + "/" + repo + "/actions";
+
     res.status(200).json({ 
       success: true, 
-      actionsUrl: `https://github.com{owner}/${repo}/actions` 
+      actionsUrl: finalUrl
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
