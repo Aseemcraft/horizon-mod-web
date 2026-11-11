@@ -9,17 +9,25 @@
     .card { background: #1e293b; padding: 2rem; border-radius: 16px; width: 90%; max-width: 450px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid #334155; }
     h1 { color: #38bdf8; font-size: 1.5rem; margin-bottom: 0.5rem; }
     p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.5rem; }
+    select { width: 100%; padding: 12px; margin-bottom: 1rem; border-radius: 8px; background: #0f172a; color: #f8fafc; border: 1px solid #38bdf8; font-size: 1rem; cursor: pointer; }
     input[type="file"] { display: none; }
-    .upload-btn { background: #0284c7; color: white; padding: 12px 24px; border-radius: 8px; cursor: pointer; display: inline-block; font-weight: bold; transition: 0.2s; }
+    .upload-btn { background: #0284c7; color: white; padding: 12px 24px; border-radius: 8px; cursor: pointer; display: inline-block; font-weight: bold; transition: 0.2s; width: 85%; }
     .upload-btn:hover { background: #0369a1; }
     #status { margin-top: 1.5rem; font-size: 0.95rem; line-height: 1.6; word-break: break-word; }
-    a.link { color: #4ade80; font-weight: bold; text-decoration: none; display: inline-block; margin-top: 10px; padding: 8px 16px; background: #14532d; border-radius: 6px; }
+    .download-btn { color: #ffffff; font-weight: bold; text-decoration: none; display: inline-block; margin-top: 12px; padding: 12px 24px; background: #16a34a; border-radius: 8px; transition: 0.2s; }
+    .download-btn:hover { background: #15803d; }
   </style>
 </head>
 <body>
   <div class="card">
     <h1>⚡ محول مودات Java إلى Rust</h1>
-    <p>ارفع ملف المود (.jar) وسيقوم الذكاء الاصطناعي بتحويله وتجميعه لمحرك Horizon و Starling تلقائياً.</p>
+    <p>اختر جهازك ثم ارفع ملف المود (.jar) لتحويله لمحرك Horizon و Starling تلقائياً.</p>
+    
+    <select id="platform">
+      <option value="android">📱 الأندرويد (ARM64 - aarch64)</option>
+      <option value="pc">💻 الكمبيوتر (PC - x86_64 Windows/Linux)</option>
+    </select>
+
     <label class="upload-btn">
       اختر ملف المود (.jar)
       <input type="file" id="modFile" accept=".jar">
@@ -28,9 +36,32 @@
   </div>
 
   <script>
+    let checkInterval;
+
+    function startChecking() {
+      const status = document.getElementById('status');
+      checkInterval = setInterval(async () => {
+        try {
+          const res = await fetch('/api/download');
+          const data = await res.json();
+
+          if (data.status === 'ready') {
+            clearInterval(checkInterval);
+            status.innerHTML = `🎉 اكتمل التحويل والتجميع بنجاح!<br><a class="download-btn" href="/api/download?download=true">تحميل المود الجاهز الآن (.zip) ⬇️</a>`;
+          } else if (data.status === 'failed') {
+            clearInterval(checkInterval);
+            status.innerHTML = "❌ تعذر تجميع هذا المود، يرجى تجربة مود أبسط.";
+          }
+        } catch (e) {}
+      }, 10000);
+    }
+
     document.getElementById('modFile').addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
+      if (checkInterval) clearInterval(checkInterval);
+
+      const platform = document.getElementById('platform').value;
       const status = document.getElementById('status');
       status.innerHTML = "⏳ جاري رفع المود وإرساله لمحرك الذكاء الاصطناعي...";
 
@@ -41,22 +72,14 @@
           const res = await fetch('/api/upload', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fileBase64: base64 })
+            body: JSON.stringify({ fileBase64: base64, platform: platform })
           });
-          
-          const textResponse = await res.text();
-          let data;
-          try {
-            data = JSON.parse(textResponse);
-          } catch (parseErr) {
-            status.innerHTML = "❌ خطأ من سيرفر Vercel:<br><small>" + textResponse.slice(0, 150) + "</small>";
-            return;
-          }
-
+          const data = await res.json();
           if (data.success) {
-            status.innerHTML = `✅ تم استلام المود وبدأت عملية التحويل!<br>انتظر دقيقة ثم حمل المود الجاهز من قسم Artifacts:<br><a class="link" href="${data.actionsUrl}" target="_blank">متابعة التحويل والتحميل 🚀</a>`;
+            status.innerHTML = "⚙️ تم استلام المود! يقوم الذكاء الاصطناعي الآن بالترجمة والتجميع...<br><small>(يستغرق الأمر حوالي دقيقتين، سيظهر زر التحميل هنا تلقائياً)</small>";
+            setTimeout(startChecking, 15000);
           } else {
-            status.innerHTML = "❌ رفض السيرفر الطلب: " + data.error;
+            status.innerHTML = "❌ خطأ: " + data.error;
           }
         } catch (err) {
           status.innerHTML = "❌ خطأ في الشبكة: " + err.message;
