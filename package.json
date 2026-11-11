@@ -1,0 +1,7 @@
+{
+  "name": "horizon-mod-web",
+  "version": "1.0.0",
+  "dependencies": {
+    "@octokit/rest": "^21.0.0"
+  }
+}
