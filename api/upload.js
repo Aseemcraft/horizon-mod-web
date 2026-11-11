@@ -1,13 +1,15 @@
-import { Octokit } from "@octokit/rest";
+const { Octokit } = require("@octokit/rest");
 
-export const config = {
-  api: { bodyParser: { sizeLimit: '15mb' } },
-};
-
-export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+module.exports = async (req, res) => {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
   const { fileBase64 } = req.body;
+  if (!fileBase64) {
+    return res.status(400).json({ error: 'لم يتم استلام بيانات الملف' });
+  }
+
   const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
   const owner = "Aseemcraft";
   const repo = "horizon-mod-converter";
@@ -36,4 +38,4 @@ export default async function handler(req, res) {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-}
+};
