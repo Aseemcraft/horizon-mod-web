@@ -1,4 +1,4 @@
-hereconst { Octokit } = require("@octokit/rest");
+const { Octokit } = require("@octokit/rest");
 const AdmZip = require("adm-zip");
 
 module.exports = async (req, res) => {
@@ -43,8 +43,7 @@ module.exports = async (req, res) => {
         res.setHeader("Content-Disposition", `attachment; filename="${modFile.entryName}"`);
         return res.send(modFile.getData());
       } else {
-        // إرجاع خطأ واضح إذا لم يجد ملف .hmod بداخل الأرشيف
-        return res.status(404).send("لم يتم العثور على ملف .hmod داخل الناتج، تأكد من تحديث app.py");
+        return res.status(404).send("لم يتم العثور على ملف .hmod داخل الناتج");
       }
     }
 
