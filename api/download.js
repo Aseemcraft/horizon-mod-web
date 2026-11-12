@@ -13,9 +13,18 @@ module.exports = async (req, res) => {
       per_page: 1,
     });
 
-    const latestRun = runs.workflow_runs[0];
+    const latestRun = runs.workflow_runs;
     if (!latestRun) return res.status(200).json({ status: "waiting" });
-    if (latestRun.status !== "completed") return res.status(200).json({ status: "in_progress" });
+
+    // التحقق من أن العملية حديثة (تم إنشاؤها خلال آخر 4 دقائق) لتجنب سحب الملفات القديمة
+    const runAgeMs = Date.now() - new Date(latestRun.created_at).getTime();
+    if (req.query.download !== "true" && runAgeMs > 240000) {
+      return res.status(200).json({ status: "waiting_for_new_run" });
+    }
+
+    if (latestRun.status !== "completed") {
+      return res.status(200).json({ status: "in_progress" });
+    }
 
     const { data: artifacts } = await octokit.actions.listWorkflowRunArtifacts({
       owner,
@@ -23,7 +32,7 @@ module.exports = async (req, res) => {
       run_id: latestRun.id,
     });
 
-    const modArtifact = artifacts.artifacts[0];
+    const modArtifact = artifacts.artifacts;
     if (!modArtifact) return res.status(200).json({ status: "failed" });
 
     if (req.query.download === "true") {
@@ -36,14 +45,13 @@ module.exports = async (req, res) => {
 
       const zip = new AdmZip(Buffer.from(download.data));
       const zipEntries = zip.getEntries();
-      const modFile = zipEntries.find(entry => entry.entryName.endsWith(".hmod") || entry.entryName.endsWith(".hnmod"));
+      const firstFile = zipEntries;
 
-      if (modFile) {
-        res.setHeader("Content-Type", "application/x-horizon-mod");
-        res.setHeader("Content-Disposition", `attachment; filename="${modFile.entryName}"`);
-        return res.send(modFile.getData());
-      } else {
-        return res.status(404).send("لم يتم العثور على ملف .hmod داخل الناتج");
+      if (firstFile) {
+        const fileName = firstFile.entryName.split('/').pop();
+        res.setHeader("Content-Type", "application/octet-stream");
+        res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+        return res.send(firstFile.getData());
       }
     }
 
