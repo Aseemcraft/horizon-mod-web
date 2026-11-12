@@ -1,4 +1,4 @@
-const { Octokit } = require("@octokit/rest");
+hereconst { Octokit } = require("@octokit/rest");
 const AdmZip = require("adm-zip");
 
 module.exports = async (req, res) => {
@@ -34,19 +34,17 @@ module.exports = async (req, res) => {
         archive_format: "zip",
       });
 
-      // فك ضغط ملف GitHub واستخراج ملف .hmod أو .hnmod الصافي مباشرة
       const zip = new AdmZip(Buffer.from(download.data));
       const zipEntries = zip.getEntries();
       const modFile = zipEntries.find(entry => entry.entryName.endsWith(".hmod") || entry.entryName.endsWith(".hnmod"));
 
       if (modFile) {
-        res.setHeader("Content-Type", "application/octet-stream");
+        res.setHeader("Content-Type", "application/x-horizon-mod");
         res.setHeader("Content-Disposition", `attachment; filename="${modFile.entryName}"`);
         return res.send(modFile.getData());
       } else {
-        res.setHeader("Content-Type", "application/zip");
-        res.setHeader("Content-Disposition", 'attachment; filename="Converted-Mod.zip"');
-        return res.send(Buffer.from(download.data));
+        // إرجاع خطأ واضح إذا لم يجد ملف .hmod بداخل الأرشيف
+        return res.status(404).send("لم يتم العثور على ملف .hmod داخل الناتج، تأكد من تحديث app.py");
       }
     }
 
