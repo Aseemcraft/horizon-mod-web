@@ -22,9 +22,9 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const targetText = Buffer.from(platform || "android").toString("base64");
-    await upsertFile("target_platform.txt", targetText, "Set target platform");
-    await upsertFile("input_mod.jar", fileBase64, "Upload new mod via Web UI");
+    const targetText = Buffer.from((platform || "android") + "\n" + Date.now()).toString("base64");
+    await upsertFile("target_platform.txt", targetText, "Trigger new conversion");
+    await upsertFile("input_mod.jar", fileBase64, "Upload mod via Web UI");
 
     res.status(200).json({ success: true });
   } catch (error) {
