@@ -37,23 +37,31 @@
 
   <script>
     let checkInterval;
+    let secondsElapsed = 0;
 
     function startChecking() {
       const status = document.getElementById('status');
+      secondsElapsed = 20;
+
       checkInterval = setInterval(async () => {
+        secondsElapsed += 8;
         try {
-          const res = await fetch('/api/download');
+          const res = await fetch('/api/download?t=' + Date.now());
           const data = await res.json();
 
           if (data.status === 'ready') {
             clearInterval(checkInterval);
-            status.innerHTML = `🎉 اكتمل التحويل والتجميع بنجاح!<br><a class="download-btn" href="/api/download?download=true">تحميل المود الجاهز الآن (.zip) ⬇️</a>`;
-          } else if (data.status === 'failed') {
+            status.innerHTML = `🎉 اكتمل التحويل والتجميع بنجاح!<br><a class="download-btn" href="/api/download?download=true">تحميل المود الجاهز الآن (.hmod) ⬇️</a>`;
+          } else if (data.status === 'failed' || data.status === 'error') {
             clearInterval(checkInterval);
-            status.innerHTML = "❌ تعذر تجميع هذا المود، يرجى تجربة مود أبسط.";
+            status.innerHTML = "❌ " + (data.message || "حدث خطأ أثناء التحويل.");
+          } else {
+            status.innerHTML = `⚙️ ${data.message || "جاري المعالجة..."}<br><small>الوقت المنقضي: ${secondsElapsed} ثانية</small>`;
           }
-        } catch (e) {}
-      }, 10000);
+        } catch (e) {
+          status.innerHTML = `⏳ جاري الاتصال بالسيرفر... (${secondsElapsed} ثانية)`;
+        }
+      }, 8000);
     }
 
     document.getElementById('modFile').addEventListener('change', async (e) => {
@@ -63,7 +71,7 @@
 
       const platform = document.getElementById('platform').value;
       const status = document.getElementById('status');
-      status.innerHTML = "⏳ جاري رفع المود وإرساله لمحرك الذكاء الاصطناعي...";
+      status.innerHTML = "⏳ جاري رفع المود وإرساله للمصنع السحابي...";
 
       const reader = new FileReader();
       reader.onload = async () => {
@@ -76,10 +84,10 @@
           });
           const data = await res.json();
           if (data.success) {
-            status.innerHTML = "⚙️ تم استلام المود! يقوم الذكاء الاصطناعي الآن بالترجمة والتجميع...<br><small>(يستغرق الأمر حوالي دقيقتين، سيظهر زر التحميل هنا تلقائياً)</small>";
-            setTimeout(startChecking, 15000);
+            status.innerHTML = "🚀 تم إرسال المود للمصنع! سيبدأ فحص الجاهزية خلال 20 ثانية...";
+            setTimeout(startChecking, 20000);
           } else {
-            status.innerHTML = "❌ خطأ: " + data.error;
+            status.innerHTML = "❌ خطأ في الرفع: " + data.error;
           }
         } catch (err) {
           status.innerHTML = "❌ خطأ في الشبكة: " + err.message;
