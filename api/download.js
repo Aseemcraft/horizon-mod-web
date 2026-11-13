@@ -13,12 +13,11 @@ module.exports = async (req, res) => {
       per_page: 1,
     });
 
-    const latestRun = runs.workflow_runs;
+    const latestRun = runs.workflow_runs[0];
     if (!latestRun) return res.status(200).json({ status: "waiting" });
 
-    // التحقق من أن العملية حديثة (تم إنشاؤها خلال آخر 4 دقائق) لتجنب سحب الملفات القديمة
     const runAgeMs = Date.now() - new Date(latestRun.created_at).getTime();
-    if (req.query.download !== "true" && runAgeMs > 240000) {
+    if (req.query.download !== "true" && runAgeMs > 300000) {
       return res.status(200).json({ status: "waiting_for_new_run" });
     }
 
@@ -32,7 +31,7 @@ module.exports = async (req, res) => {
       run_id: latestRun.id,
     });
 
-    const modArtifact = artifacts.artifacts;
+    const modArtifact = artifacts.artifacts[0];
     if (!modArtifact) return res.status(200).json({ status: "failed" });
 
     if (req.query.download === "true") {
@@ -45,7 +44,7 @@ module.exports = async (req, res) => {
 
       const zip = new AdmZip(Buffer.from(download.data));
       const zipEntries = zip.getEntries();
-      const firstFile = zipEntries;
+      const firstFile = zipEntries[0];
 
       if (firstFile) {
         const fileName = firstFile.entryName.split('/').pop();
