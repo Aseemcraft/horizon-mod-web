@@ -14,15 +14,22 @@ module.exports = async (req, res) => {
     });
 
     const latestRun = runs.workflow_runs[0];
-    if (!latestRun) return res.status(200).json({ status: "waiting" });
-
-    const runAgeMs = Date.now() - new Date(latestRun.created_at).getTime();
-    if (req.query.download !== "true" && runAgeMs > 300000) {
-      return res.status(200).json({ status: "waiting_for_new_run" });
+    if (!latestRun) {
+      return res.status(200).json({ status: "waiting", message: "في انتظار بدء السيرفر..." });
     }
 
     if (latestRun.status !== "completed") {
-      return res.status(200).json({ status: "in_progress" });
+      return res.status(200).json({ 
+        status: "in_progress", 
+        message: "جاري المعالجة في المصنع السحابي (" + latestRun.status + ")..." 
+      });
+    }
+
+    if (latestRun.conclusion !== "success") {
+      return res.status(200).json({ 
+        status: "failed", 
+        message: "فشلت عملية التحويل في المصنع: " + latestRun.conclusion 
+      });
     }
 
     const { data: artifacts } = await octokit.actions.listWorkflowRunArtifacts({
@@ -32,7 +39,9 @@ module.exports = async (req, res) => {
     });
 
     const modArtifact = artifacts.artifacts[0];
-    if (!modArtifact) return res.status(200).json({ status: "failed" });
+    if (!modArtifact) {
+      return res.status(200).json({ status: "failed", message: "لم يتم العثور على ملف ناتج." });
+    }
 
     if (req.query.download === "true") {
       const download = await octokit.actions.downloadArtifact({
@@ -54,8 +63,8 @@ module.exports = async (req, res) => {
       }
     }
 
-    return res.status(200).json({ status: "ready" });
+    return res.status(200).json({ status: "ready", runId: latestRun.id });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ status: "error", message: error.message });
   }
 };
